@@ -355,11 +355,11 @@ void easy::set_http_post(std::unique_ptr<form> form, std::error_code& ec) {
 
     if (form_) {
         ec = std::error_code{static_cast<errc::EasyErrorCode>(
-            native::curl_easy_setopt(handle_, native::CURLOPT_HTTPPOST, form_->native_handle())
+            native::curl_easy_setopt(handle_, native::CURLOPT_MIMEPOST, form_->native_handle())
         )};
     } else {
         ec = std::error_code{
-            static_cast<errc::EasyErrorCode>(native::curl_easy_setopt(handle_, native::CURLOPT_HTTPPOST, NULL))};
+            static_cast<errc::EasyErrorCode>(native::curl_easy_setopt(handle_, native::CURLOPT_MIMEPOST, NULL))};
     }
 }
 

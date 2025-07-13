@@ -27,7 +27,7 @@ public:
     form& operator=(form&&) = delete;
     ~form();
 
-    inline native::curl_httppost* native_handle() { return post_; };
+    inline native::curl_mime* native_handle() { return mime_; };
 
     void add_content(std::string_view key, std::string_view content);
     void add_content(std::string_view key, std::string_view content, std::error_code& ec);
@@ -104,8 +104,7 @@ private:
         std::error_code& ec
     );
 
-    native::curl_httppost* post_{nullptr};
-    native::curl_httppost* last_{nullptr};
+    native::curl_mime* mime_{nullptr};
     std::vector<std::shared_ptr<std::string>> buffers_;
 };
 

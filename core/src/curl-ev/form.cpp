@@ -15,12 +15,15 @@ USERVER_NAMESPACE_BEGIN
 
 namespace curl {
 
-form::form() { impl::CurlGlobal::Init(); }
+form::form() {
+    impl::CurlGlobal::Init(); 
+    mime_ = native::curl_mime_init(nullptr);
+}
 
 form::~form() {
-    if (post_) {
-        native::curl_formfree(post_);
-        post_ = nullptr;
+    if (mime_) {
+        native::curl_mime_free(mime_);
+        mime_ = nullptr;
     }
 }
 
@@ -31,18 +34,16 @@ void form::add_content(std::string_view key, std::string_view content) {
 }
 
 void form::add_content(std::string_view key, std::string_view content, std::error_code& ec) {
-    ec = std::error_code{static_cast<errc::FormErrorCode>(native::curl_formadd(
-        &post_,
-        &last_,
-        native::CURLFORM_COPYNAME,
-        key.data(),
-        native::CURLFORM_NAMELENGTH,
-        key.length(),
-        native::CURLFORM_COPYCONTENTS,
+    auto part = native::curl_mime_addpart(mime_);
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_name(
+        part,
+        key.data()
+    ))};
+    if (ec) { return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_data(
+        part,
         content.data(),
-        native::CURLFORM_CONTENTSLENGTH,
-        content.length(),
-        native::CURLFORM_END
+        content.length()
     ))};
 }
 
@@ -58,20 +59,21 @@ void form::add_content(
     const std::string& content_type,
     std::error_code& ec
 ) {
-    ec = std::error_code{static_cast<errc::FormErrorCode>(native::curl_formadd(
-        &post_,
-        &last_,
-        native::CURLFORM_COPYNAME,
-        key.data(),
-        native::CURLFORM_NAMELENGTH,
-        key.length(),
-        native::CURLFORM_COPYCONTENTS,
+    auto part = native::curl_mime_addpart(mime_);
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_name(
+        part,
+        key.data()
+    ))};
+    if (ec) { return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_data(
+        part,
         content.data(),
-        native::CURLFORM_CONTENTSLENGTH,
-        content.length(),
-        native::CURLFORM_CONTENTTYPE,
-        content_type.c_str(),
-        native::CURLFORM_END
+        content.length()
+    ))};
+    if (ec) { return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_type(
+        part,
+        content_type.data()
     ))};
 }
 
@@ -82,20 +84,21 @@ void form::add_buffer(
     size_t buffer_len,
     std::error_code& ec
 ) {
-    ec = std::error_code{static_cast<errc::FormErrorCode>(native::curl_formadd(
-        &post_,
-        &last_,
-        native::CURLFORM_COPYNAME,
-        key.c_str(),
-        native::CURLFORM_NAMELENGTH,
-        key.length(),
-        native::CURLFORM_BUFFER,
-        file_name.c_str(),
-        native::CURLFORM_BUFFERPTR,
+    auto part = native::curl_mime_addpart(mime_);
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_name(
+        part,
+        key.data()
+    ))};
+    if (ec) { return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_data(
+        part,
         buffer,
-        native::CURLFORM_BUFFERLENGTH,
-        buffer_len,
-        native::CURLFORM_END
+        buffer_len
+    ))};
+    if (ec) { return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_filename(
+        part,
+        file_name.c_str()
     ))};
 }
 
@@ -138,22 +141,26 @@ void form::add_buffer(
     std::error_code& ec
 ) {
     buffers_.push_back(buffer);
-    ec = std::error_code{static_cast<errc::FormErrorCode>(native::curl_formadd(
-        &post_,
-        &last_,
-        native::CURLFORM_COPYNAME,
-        key.c_str(),
-        native::CURLFORM_NAMELENGTH,
-        key.length(),
-        native::CURLFORM_BUFFER,
-        file_name.c_str(),
-        native::CURLFORM_BUFFERPTR,
+    auto part = native::curl_mime_addpart(mime_);
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_name(
+        part,
+        key.data()
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_data(
+        part,
         buffer->c_str(),
-        native::CURLFORM_BUFFERLENGTH,
-        buffer->length(),
-        native::CURLFORM_CONTENTTYPE,
-        content_type.c_str(),
-        native::CURLFORM_END
+        buffer->length()
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_filename(
+        part,
+        file_name.c_str()
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_type(
+        part,
+        content_type.data()
     ))};
 }
 
@@ -164,16 +171,15 @@ void form::add_file(const std::string& key, const std::string& file_path) {
 }
 
 void form::add_file(const std::string& key, const std::string& file_path, std::error_code& ec) {
-    ec = std::error_code{static_cast<errc::FormErrorCode>(native::curl_formadd(
-        &post_,
-        &last_,
-        native::CURLFORM_COPYNAME,
-        key.c_str(),
-        native::CURLFORM_NAMELENGTH,
-        key.length(),
-        native::CURLFORM_FILE,
-        file_path.c_str(),
-        native::CURLFORM_END
+    auto part = native::curl_mime_addpart(mime_);
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_name(
+        part,
+        key.data()
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_filedata(
+        part,
+        file_path.c_str()
     ))};
 }
 
@@ -189,18 +195,20 @@ void form::add_file(
     const std::string& content_type,
     std::error_code& ec
 ) {
-    ec = std::error_code{static_cast<errc::FormErrorCode>(native::curl_formadd(
-        &post_,
-        &last_,
-        native::CURLFORM_COPYNAME,
-        key.c_str(),
-        native::CURLFORM_NAMELENGTH,
-        key.length(),
-        native::CURLFORM_FILE,
-        file_path.c_str(),
-        native::CURLFORM_CONTENTTYPE,
-        content_type.c_str(),
-        native::CURLFORM_END
+    auto part = native::curl_mime_addpart(mime_);
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_name(
+        part,
+        key.data()
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_filedata(
+        part,
+        file_path.c_str()
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_type(
+        part,
+        content_type.data()
     ))};
 }
 
@@ -216,18 +224,20 @@ void form::add_file_using_name(
     const std::string& file_name,
     std::error_code& ec
 ) {
-    ec = std::error_code{static_cast<errc::FormErrorCode>(native::curl_formadd(
-        &post_,
-        &last_,
-        native::CURLFORM_COPYNAME,
-        key.c_str(),
-        native::CURLFORM_NAMELENGTH,
-        key.length(),
-        native::CURLFORM_FILE,
-        file_path.c_str(),
-        native::CURLFORM_FILENAME,
-        file_name.c_str(),
-        native::CURLFORM_END
+    auto part = native::curl_mime_addpart(mime_);
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_name(
+        part,
+        key.data()
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_filedata(
+        part,
+        file_path.c_str()
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_filename(
+        part,
+        file_name.c_str()
     ))};
 }
 
@@ -249,20 +259,25 @@ void form::add_file_using_name(
     const std::string& content_type,
     std::error_code& ec
 ) {
-    ec = std::error_code{static_cast<errc::FormErrorCode>(native::curl_formadd(
-        &post_,
-        &last_,
-        native::CURLFORM_COPYNAME,
-        key.c_str(),
-        native::CURLFORM_NAMELENGTH,
-        key.length(),
-        native::CURLFORM_FILE,
-        file_path.c_str(),
-        native::CURLFORM_FILENAME,
-        file_name.c_str(),
-        native::CURLFORM_CONTENTTYPE,
-        content_type.c_str(),
-        native::CURLFORM_END
+    auto part = native::curl_mime_addpart(mime_);
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_name(
+        part,
+        key.data()
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_filedata(
+        part,
+        file_path.c_str()
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_filename(
+        part,
+        file_name.c_str()
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_type(
+        part,
+        content_type.data()
     ))};
 }
 
@@ -273,16 +288,20 @@ void form::add_file_content(const std::string& key, const std::string& file_path
 }
 
 void form::add_file_content(const std::string& key, const std::string& file_path, std::error_code& ec) {
-    ec = std::error_code{static_cast<errc::FormErrorCode>(native::curl_formadd(
-        &post_,
-        &last_,
-        native::CURLFORM_COPYNAME,
-        key.c_str(),
-        native::CURLFORM_NAMELENGTH,
-        key.length(),
-        native::CURLFORM_FILECONTENT,
-        file_path.c_str(),
-        native::CURLFORM_END
+    auto part = native::curl_mime_addpart(mime_);
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_name(
+        part,
+        key.data()
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_filedata(
+        part,
+        file_path.c_str()
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_filename(
+        part,
+        nullptr
     ))};
 }
 
@@ -298,18 +317,25 @@ void form::add_file_content(
     const std::string& content_type,
     std::error_code& ec
 ) {
-    ec = std::error_code{static_cast<errc::FormErrorCode>(native::curl_formadd(
-        &post_,
-        &last_,
-        native::CURLFORM_COPYNAME,
-        key.c_str(),
-        native::CURLFORM_NAMELENGTH,
-        key.length(),
-        native::CURLFORM_FILECONTENT,
-        file_path.c_str(),
-        native::CURLFORM_CONTENTTYPE,
-        content_type.c_str(),
-        native::CURLFORM_END
+    auto part = native::curl_mime_addpart(mime_);
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_name(
+        part,
+        key.data()
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_filedata(
+        part,
+        file_path.c_str()
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_filename(
+        part,
+        nullptr
+    ))};
+    if (ec) {  return; }
+    ec = std::error_code{static_cast<errc::EasyErrorCode>(native::curl_mime_type(
+        part,
+        content_type.data()
     ))};
 }
 

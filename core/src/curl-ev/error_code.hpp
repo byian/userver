@@ -128,17 +128,6 @@ enum class ShareErrorCode {
     kNotBuiltIn = native::CURLSHE_NOT_BUILT_IN
 };
 
-enum class FormErrorCode {
-    kSuccess = native::CURL_FORMADD_OK,
-    kMemory = native::CURL_FORMADD_MEMORY,
-    kOptionTwice = native::CURL_FORMADD_OPTION_TWICE,
-    kNull = native::CURL_FORMADD_NULL,
-    kUnknownOption = native::CURL_FORMADD_UNKNOWN_OPTION,
-    kIncomplete = native::CURL_FORMADD_INCOMPLETE,
-    kIllegalArray = native::CURL_FORMADD_ILLEGAL_ARRAY,
-    kDisabled = native::CURL_FORMADD_DISABLED
-};
-
 enum class UrlErrorCode {
     kSuccess = native::CURLUE_OK,
     kBadHandle = native::CURLUE_BAD_HANDLE,
@@ -169,7 +158,6 @@ enum class RateLimitErrorCode {
 const std::error_category& GetEasyCategory() noexcept;
 const std::error_category& GetMultiCategory() noexcept;
 const std::error_category& GetShareCategory() noexcept;
-const std::error_category& GetFormCategory() noexcept;
 const std::error_category& GetUrlCategory() noexcept;
 const std::error_category& GetRateLimitCategory() noexcept;
 
@@ -189,9 +177,6 @@ template <>
 struct is_error_code_enum<USERVER_NAMESPACE::curl::errc::ShareErrorCode> : std::true_type {};
 
 template <>
-struct is_error_code_enum<USERVER_NAMESPACE::curl::errc::FormErrorCode> : std::true_type {};
-
-template <>
 struct is_error_code_enum<USERVER_NAMESPACE::curl::errc::UrlErrorCode> : std::true_type {};
 
 template <>
@@ -208,8 +193,6 @@ inline std::error_code make_error_code(EasyErrorCode e) { return {static_cast<in
 inline std::error_code make_error_code(MultiErrorCode e) { return {static_cast<int>(e), GetMultiCategory()}; }
 
 inline std::error_code make_error_code(ShareErrorCode e) { return {static_cast<int>(e), GetShareCategory()}; }
-
-inline std::error_code make_error_code(FormErrorCode e) { return {static_cast<int>(e), GetFormCategory()}; }
 
 inline std::error_code make_error_code(UrlErrorCode e) { return {static_cast<int>(e), GetUrlCategory()}; }
 

@@ -9,9 +9,9 @@ if(NOT USERVUSERVER_FORCE_DOWNLOAD_CURL)
   endif()
 
   if(USERVER_DOWNLOAD_PACKAGE_CURL)
-    find_package(CURL "7.68")
+    find_package(CURL "7.87")
   else()
-    find_package(CURL "7.68" REQUIRED)
+    find_package(CURL "7.87" REQUIRED)
   endif()
 
   if (USERVER_USE_STATIC_LIBS)
@@ -47,9 +47,9 @@ endif()
 include(DownloadUsingCPM)
 CPMAddPackage(
     NAME curl
-    VERSION 7.81
+    VERSION 7.87
     GITHUB_REPOSITORY curl/curl
-    GIT_TAG curl-7_81_0
+    GIT_TAG curl-7_87_0
     OPTIONS
     "BUILD_CURL_EXE OFF"
     "BUILD_SHARED_LIBS OFF"

@@ -47,36 +47,6 @@ public:
     }
 };
 
-class FormErrorCategory final : public std::error_category {
-public:
-    using std::error_category::error_category;
-
-    [[nodiscard]] const char* name() const noexcept override { return "curl-form"; }
-
-    [[nodiscard]] std::string message(int cond) const override {
-        switch (static_cast<FormErrorCode>(cond)) {
-            case FormErrorCode::kSuccess:
-                return "no error";
-            case FormErrorCode::kMemory:
-                return "memory allocation error";
-            case FormErrorCode::kOptionTwice:
-                return "one option is given twice";
-            case FormErrorCode::kNull:
-                return "a null pointer was given for a char";
-            case FormErrorCode::kUnknownOption:
-                return "an unknown option was used";
-            case FormErrorCode::kIncomplete:
-                return "some FormInfo is not complete (or error)";
-            case FormErrorCode::kIllegalArray:
-                return "an illegal option is used in an array";
-            case FormErrorCode::kDisabled:
-                return "form support was disabled";
-            default:
-                return "unknown CURLFORMcode";
-        }
-    }
-};
-
 class UrlErrorCategory final : public std::error_category {
 public:
     using std::error_category::error_category;
@@ -162,11 +132,6 @@ const std::error_category& GetMultiCategory() noexcept {
 const std::error_category& GetShareCategory() noexcept {
     static const ShareErrorCategory kShareCategory;
     return kShareCategory;
-}
-
-const std::error_category& GetFormCategory() noexcept {
-    static const FormErrorCategory kFormCategory;
-    return kFormCategory;
 }
 
 const std::error_category& GetUrlCategory() noexcept {
